@@ -1,30 +1,19 @@
-import discord, math, datetime, time, pyfiglet, io, textwrap, contextlib, pendulum, dotenv, operator, re, traceback, aiohttp, sqlite3, asyncio, requests, urllib.request, logging, typing, random, os, psutil, platform, sys, fnmatch, subprocess, json, struct
-from discord import *
-from traceback import format_exception
+import math, datetime, time, pendulum, aiohttp, sqlite3, asyncio, logging, os, platform, json, textwrap
 from PIL import Image
-from pyparsing import Literal,CaselessLiteral,Word,Combine,Group,Optional,ZeroOrMore,Forward,nums,alphas,oneOf
 from pathlib import Path
-from random import choice, randint, randrange
 from discord.ext import commands
 import discord.utils
 import motor.motor_asyncio
-from pymongo import MongoClient
 import utils.json_loader
 from utils.tools import *
 from utils.mongo import Document
 from utils.channel_logger import Channel_Logger
-from discord.utils import get
 from utils.language import Language
-from discord.ext import commands, tasks
+from discord.ext import commands
 from discord.ext.commands import Bot, MissingPermissions, has_permissions, bot_has_permissions
-from discord.ext.tasks import loop
-from asyncio import sleep
 from utils import config
-from utils.util import clean_code, Pag
-from utils import checks
-from pyfiglet import figlet_format, FontNotFound
-import datetime as dt
-from utils.logger import log
+from pyfiglet import figlet_format
+from discord import Spotify
 from dotenv import load_dotenv
 
 
@@ -78,6 +67,7 @@ bot.db = bot.mongo["pinkalicious"]
 bot.reaction_roles = Document(bot.db, "reaction_roles")
 bot.muted_users = {}
 bot.mutes = Document(bot.db, "mutes")
+bot.warns = Document(bot.db, "warns")
 bot.command_usage = Document(bot.db, "command_usage")
 bot.config = Document(bot.db, "config")
 bot.reaction_roles = Document(bot.db, "reaction_roles")
@@ -123,13 +113,12 @@ async def on_ready():
 	print("I'm made by Pinkalicious21902")
 	print("Who's ready to have a good time?")
 	print(len(bot.commands))
-	await bot.change_presence(status=discord.Status.dnd, activity=discord.Game("i believe in ranboo supremacy"))
-	# statuses = ["Minecraft", "Tmodloader", "Convincing my master to be happy", "Billie Eilish", "Juice WRLD", "Banning Bowling Pins", "Helping sarah-chan steal my token", "scanning for rulebreakers", "Helping Pink fix me", "Daring raiders to test my skills", "I'm awesome!", "Thanks to Sukuya!"]
-	# running = True
-	# while running == True:
-	# 	await bot.change_presence(status=discord.Status.online, activity=discord.Game(random.choice(statuses)))
-	# 	await asyncio.sleep(30)
-	# 	await bot.change_presence(status=discord.Status.online, activity=discord.Game(random.choice(statuses)))
+	hel = ["Minecraft", "Bugging Pink", "Defending friends", "Tmodloader", "Juice WRLD", "Banning Bowling Pins", "scanning for rulebreakers", "I'm awesome!"]
+	running = True
+	while running == True:
+		await bot.change_presence(status=discord.Status.online, activity=discord.Game(random.choice(hel)))
+		await asyncio.sleep(30)
+		await bot.change_presence(status=discord.Status.online, activity=discord.Game(random.choice(hel)))
 	currentMutes = await bot.mutes.get_all()
 	for mute in currentMutes:
 		bot.muted_users[mute["_id"]] = mute
@@ -159,7 +148,7 @@ async def on_message(message):
 	if message.content.startswith(f"<@!{bot.user.id}>") and len(message.content) == len(
 		f"<@!{bot.user.id}>"
 	):
-		data = await bot.config.get_by_id(message.guild.id)
+		data = await bot.config.find_by_id(message.guild.id)
 		if not data or "prefix" not in data:
 			prefix = config.command_prefixes
 		else:
@@ -184,7 +173,6 @@ def quote(query):
 
 
 @bot.command(hidden=True)
-@commands.is_owner()
 @commands.cooldown(1, 15, commands.BucketType.user)
 @commands.guild_only()
 async def spamtwo(ctx, *, message):
@@ -208,6 +196,7 @@ async def check_permissions(ctx, member: discord.Member=None):
 	embed.add_field(name='\uFEFF', value=perms)
 	await ctx.send(content=None, embed=embed)
 @bot.command(name="wipe", aliases=["delete", "clean", "removespam"])
+@commands.cooldown(1, 30, commands.BucketType.user)
 @commands.has_permissions(manage_messages=True)
 async def purge(ctx, number: int):
 	"""Deletes a certain number of messages"""
@@ -243,6 +232,7 @@ async def hostinfo(ctx):
 
 	await ctx.send(embed=embed)
 @bot.command(name="reddit", description="Gets a random post from reddit", usage="<subreddit>")
+@commands.cooldown(1, 15, commands.BucketType.user)
 async def reddit(ctx, *, subreddit):
 	import praw
 
@@ -287,9 +277,9 @@ async def spotify(ctx, user: discord.Member=None):
 			await ctx.send(embed=em)
 			break
 	else:
-		  embed = discord.Embed(color=0xff0000)
-		  embed.title = f'{user.name} is not listening Spotify right now!'
-		  await ctx.send(embed=embed)
+		embed = discord.Embed(color=0xff0000)
+		embed.title = f'{user.name} is not listening Spotify right now!'
+		await ctx.send(embed=embed)
 
 @bot.command(aliases=["makebig", "enlargen", "supersize"])
 async def embiggen(ctx, *, text):
@@ -376,6 +366,7 @@ async def online(ctx):
 
 @bot.command(aliases=["nickchange", "changenick"])
 @has_permissions(manage_nicknames=True)
+@commands.cooldown(1, 20, commands.BucketType.user)
 async def changenickname(ctx, member : discord.Member, *, nickname):
 	"""Change a user's nickname"""
 	if member == ctx.guild.owner:
@@ -469,13 +460,13 @@ async def calculatepi(ctx, n:int):
 	if n > 15:
 		return await ctx.send("the maximum is 15 digits sadly.")
 	await ctx.send(roundpi(n))
-@bot.command(hidden=True, enabled=True)
+@bot.command(hidden=True, enabled=False)
 @commands.is_nsfw()
 async def rule34(ctx, *, tags:str):
 	"""A wonderfun NSFW command"""
 	await ctx.channel.trigger_typing()
 	try:
-		data = requests.get("http://rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&limit={}&tags={}".format(limit, tags), headers=header).json()
+		data = requests.get("http://rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&limit={}&tags={}".format(tags), headers=header).json()
 	except json.JSONDecodeError as f:
 		logger.error(f)
 		await ctx.send(Language.get("nsfw.no_results_found", ctx).format(tags))
@@ -492,8 +483,7 @@ async def rule34(ctx, *, tags:str):
 	for i in range(image_count):
 		image = data[random.randint(0, count)]
 		images.append("http://img.rule34.xxx/images/{}/{}".format(image["directory"], image["image"]))
-	await ctx.send(Language.get("nsfw.results", ctx).format(image_count, count, tags, "\n".join(images)))
-
+	await ctx.send(("nsfw.results", ctx).format(image_count, count, tags, "\n".join(images)))
 @bot.command(aliases=["cutedog", "randomdog"])
 async def shibe(ctx):
 	"""Sends a random shibe picture."""
@@ -508,7 +498,13 @@ async def shibe(ctx):
 	except aiohttp.ClientError as e:
 		logger.error(e)
 		await ctx.send(f"{ctx.tick(False)} Failed to grab a shibe. Try again later.")
-
+@bot.command()
+@commands.has_permissions(manage_channels=True)
+@commands.bot_has_permissions(manage_channels=True)
+@commands.cooldown(1, 20,commands.BucketType.user)
+async def setdelay(ctx, seconds: int):
+	await ctx.channel.edit(slowmode_delay=seconds)
+	await ctx.send(f"Set the slowmode delay in this channel to {seconds} seconds!")
 @bot.command(name="emojinames", description="Shows the names of recent custom emoji used. Useful for mobile users.")
 @commands.guild_only()
 @commands.has_permissions(read_message_history=True)
@@ -589,6 +585,5 @@ if __name__ == '__main__':
 	for file in os.listdir(cogdir):
 		if file.endswith(".py") and not file.startswith("_") and not file.startswith("xphelp.py"):
 			bot.load_extension(f"cogs.{file[:-3]}")
-load_dotenv()
-token = os.getenv('DISCORD_TOKEN')
+token = os.getenv('token')
 bot.run(token)

@@ -42,13 +42,13 @@ class Ownercommands(commands.Cog):
 		  await aiosession.close()
 		except:
 		   pass
-		await self.bot.logout()
+		await self.bot.close()
 		subprocess.call([sys.executable, "bot.py"])
 	@commands.command(
 		name="blacklist", description="Blacklist a user from the bot", usage="<user>"
 	)
 	@commands.is_owner()
-	async def blacklist(self, ctx, user: discord.Member):
+	async def blacklist(self, ctx, user: discord.User):
 		if user.id in self.bot.owner_ids:
 			await ctx.send("Cant blacklist an owner")
 			return

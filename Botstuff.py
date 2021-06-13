@@ -91,9 +91,9 @@ class Botstuff(commands.Cog):
 		embed.add_field(name="Need help on how to use it?", value="You can check the help command by doing \n\n``^help`` \n\n Updates will constantly be pushed out with more features and new commands.")
 		embed.add_field(name="Thanks to Sukuya for inspiration.", value=":smile:")
 		await ctx.send(embed=embed)
-	# @commands.command(name="platform", description="Tells the platform the bot's running on")
-	# async def platforms(self, ctx):
-	# 	await ctx.send("The bot is currently running on: ```" + str(platform.platform()) + "```")
+	@commands.command(name="platform", description="Tells the platform the bot's running on")
+	async def platforms(self, ctx):
+		await ctx.send("The bot is currently running on: ```" + str(platform.platform()) + "```")
 	@commands.command(description="Lists the servers Terrabot is in")
 	async def serverlist(self, ctx):
 		x = ', '.join([str(server) for server in self.bot.guilds])
@@ -137,11 +137,7 @@ class Botstuff(commands.Cog):
 			await ctx.send(Language.get("moderation.unpin_success", ctx))
 		except discord.errors.Forbidden:
 			await ctx.send(Language.get("moderation.no_manage_messages_perms", ctx))
-	@commands.command(description="Sends an invite link to the bot's server")
-	async def botserver(self, ctx):
-		
-		await ctx.send(Language.get("bot.invite", ctx).format("https://discord.gg/MJsmbD2", self.bot.command_prefix))
-		await ctx.author.send(Language.get("bot.invite", ctx).format("https://discord.gg/MJsmbD2", self.bot.command_prefix))
+	
 	@commands.command(description="Sends the bot's OAuth2 link")
 	@commands.guild_only()
 	async def inviteme(self, ctx):

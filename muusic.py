@@ -340,6 +340,7 @@ class Music(commands.Cog):
             ctx.voice_state.voice.stop()
             del self.voice_states[ctx.guild.id]
             await ctx.message.add_reaction('⏹')
+            await ctx.guild.voice_client.disconnect()
 
     @commands.command(name='skip')
     async def _skip(self, ctx: commands.Context):
@@ -446,4 +447,4 @@ class Music(commands.Cog):
             if ctx.voice_client.channel != ctx.author.voice.channel:
                 raise commands.CommandError('Bot is already in a voice channel.')
 def setup(bot):
-	bot.add_cog(Music(bot))
+    bot.add_cog(Music(bot))
